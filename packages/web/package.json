@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@docquiz/shared": "workspace:*",
+    "lucide-react": "^1.57.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "wouter": "^3.13.0",
