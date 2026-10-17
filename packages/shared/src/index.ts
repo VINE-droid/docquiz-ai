@@ -42,6 +42,43 @@ export const generateQuizResponseSchema = z.object({
 
 export type GenerateQuizResponse = z.infer<typeof generateQuizResponseSchema>;
 
+export const difficultyModeSchema = z.enum(['blitz', 'challenge', 'relaxed', 'untimed']);
+export type DifficultyMode = z.infer<typeof difficultyModeSchema>;
+
+export const difficultyConfig = {
+  blitz:     { label: 'Blitz',     seconds: 10,  emoji: '⚡' },
+  challenge: { label: 'Challenge', seconds: 20,  emoji: '🎯' },
+  relaxed:   { label: 'Relaxed',   seconds: 45,  emoji: '🧘' },
+  untimed:   { label: 'Untimed',   seconds: null, emoji: '♾️' },
+} as const;
+
+// A question with options shuffled, but correct answer tracked by value
+export const shuffledQuestionSchema = z.object({
+  question:     z.string(),
+  options:      z.array(z.string()).length(4),
+  correctValue: z.string(),   // The text of the correct option
+  explanation:  z.string(),
+  citation:     z.string(),
+}).refine((question) => question.options.includes(question.correctValue));
+export type ShuffledQuestion = z.infer<typeof shuffledQuestionSchema>;
+
+export const quizSessionSchema = z.object({
+  questions:    z.array(shuffledQuestionSchema),
+  difficulty:   difficultyModeSchema,
+  currentIndex: z.number().int().min(0),
+  score:        z.number().int().min(0),
+  answers:      z.array(z.object({
+    selectedValue: z.string().nullable(),   // null = timed out
+    correct:       z.boolean(),
+  })),
+  selectedValue: z.string().nullable(),
+  locked:       z.boolean(),
+  questionStartedAt: z.number(),
+  completedAt:  z.number().nullable().default(null),
+  createdAt:    z.number(),  // Date.now()
+});
+export type QuizSession = z.infer<typeof quizSessionSchema>;
+
 export const errorResponseSchema = z.object({
   error: z.string(),
   message: z.string().optional(),

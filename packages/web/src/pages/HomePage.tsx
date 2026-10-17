@@ -1,10 +1,14 @@
-import { useState, useEffect, useRef, type ChangeEvent, type DragEvent } from 'react';
+import { useState, useEffect, useRef, type ChangeEvent, type DragEvent, type ReactNode } from 'react';
 import {
   documentExtractResponseSchema,
+  difficultyConfig,
   generateQuizResponseSchema,
+  type DifficultyMode,
   type DocumentExtractResponse,
   type QuizQuestion,
 } from '@docquiz/shared';
+import { useLocation } from 'wouter';
+import { createQuizSession, saveQuizSession } from '../quizSession';
 import {
   UploadCloud,
   FileText,
@@ -25,6 +29,10 @@ import {
   HelpCircle,
   BrainCircuit,
   Quote,
+  Zap,
+  Target,
+  Leaf,
+  Infinity,
 } from 'lucide-react';
 
 const STORAGE_KEY = 'docquiz_extracted_document';
@@ -34,6 +42,7 @@ const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.txt', '.md', '.markdown', '.csv'
 const PRESET_COUNTS = [3, 5, 7, 10];
 
 export function HomePage() {
+  const [, navigate] = useLocation();
   const [extractedDoc, setExtractedDoc] = useState<DocumentExtractResponse | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -51,6 +60,7 @@ export function HomePage() {
   const [quizError, setQuizError] = useState<string | null>(null);
   const [generatedQuestions, setGeneratedQuestions] = useState<QuizQuestion[] | null>(null);
   const [quizSource, setQuizSource] = useState<'gemini' | 'local' | null>(null);
+  const [difficulty, setDifficulty] = useState<DifficultyMode>('challenge');
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const questionsListRef = useRef<HTMLDivElement | null>(null);
@@ -238,6 +248,20 @@ export function HomePage() {
     } finally {
       setIsGeneratingQuiz(false);
     }
+  };
+
+  const handleStartQuiz = () => {
+    if (!generatedQuestions?.length) return;
+    saveQuizSession(createQuizSession(generatedQuestions, difficulty));
+    navigate('/quiz');
+  };
+
+  const difficultyModes: DifficultyMode[] = ['blitz', 'challenge', 'relaxed', 'untimed'];
+  const difficultyIcons: Record<DifficultyMode, ReactNode> = {
+    blitz: <Zap className="w-4 h-4 text-yellow-400" />,
+    challenge: <Target className="w-4 h-4 text-rose-400" />,
+    relaxed: <Leaf className="w-4 h-4 text-emerald-400" />,
+    untimed: <Infinity className="w-4 h-4 text-slate-400" />,
   };
 
   const copyToClipboard = async (text: string, isFullText = false, chunkIdx?: number) => {
@@ -569,6 +593,34 @@ Retrieval-Augmented Generation (RAG) grounds language model outputs in external 
                   <p className="text-xs text-slate-400 max-w-xl">
                     Select how many multiple-choice questions you want to generate. Questions include 4 options, verified correct index, explanation, and text citations.
                   </p>
+                  <div className="grid grid-cols-2 gap-2 pt-2 sm:grid-cols-4" role="group" aria-label="Quiz difficulty">
+                    {difficultyModes.map((mode) => {
+                      const config = difficultyConfig[mode];
+                      const isSelected = difficulty === mode;
+                      return (
+                        <button
+                          key={mode}
+                          type="button"
+                          id={`difficulty-${mode}`}
+                          aria-pressed={isSelected}
+                          onClick={() => setDifficulty(mode)}
+                          className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors ${
+                            isSelected
+                              ? 'border-indigo-500/70 bg-indigo-500/15 text-white'
+                              : 'border-slate-800 bg-slate-950/50 text-slate-400 hover:border-slate-600 hover:text-slate-200'
+                          }`}
+                        >
+                          {difficultyIcons[mode]}
+                          <span>
+                            <span className="block text-xs font-semibold">{config.label}</span>
+                            <span className="block text-[10px] text-slate-500">
+                              {config.seconds === null ? 'No timer' : `${config.seconds}s / question`}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Question Count Selector & Generate Button */}
@@ -699,6 +751,13 @@ Retrieval-Augmented Generation (RAG) grounds language model outputs in external 
                     >
                       <Copy className="w-3.5 h-3.5" />
                       <span>Copy JSON</span>
+                    </button>
+                    <button
+                      id="start-quiz-button"
+                      onClick={handleStartQuiz}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-indigo-500"
+                    >
+                      Start Quiz <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
