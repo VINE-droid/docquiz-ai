@@ -1,0 +1,13 @@
+{
+  "name": "docquiz-ai",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @docquiz/api --filter @docquiz/web --parallel dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}
